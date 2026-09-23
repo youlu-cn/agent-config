@@ -37,7 +37,7 @@ assert.equal(process.env.PI_OFFLINE, "1");
 assert.equal(process.env.npm_config_ignore_scripts, "true");
 assert.deepEqual(process.argv.slice(2), ["remove", ${JSON.stringify(SOURCE)}, "--no-approve"]);
 assert.equal(fs.realpathSync(process.cwd()), fs.realpathSync(path.dirname(path.dirname(agent))));
-assert.ok(fs.existsSync(path.join(agent, "extensions/openai-fast/index.ts")), "new plugin must be installed first");
+assert.ok(fs.existsSync(path.join(agent, "extensions/fast/index.ts")), "new plugin must be installed first");
 const settings = JSON.parse(fs.readFileSync(path.join(agent, "settings.json")));
 assert.equal(settings.packages.includes(${JSON.stringify(SOURCE)}), false);
 fs.appendFileSync(process.env.PI_TEST_CALL_LOG, JSON.stringify({ agent, args: process.argv.slice(2) }) + "\\n");
@@ -67,7 +67,7 @@ if (process.env.PI_TEST_REMOVE_NONZERO_AFTER === "1") process.exit(1);
 function seedOld(f, { directory = true, declaration = true } = {}) {
 	mkdirSync(join(f.agentDir, "npm"), { recursive: true });
 	const settings = JSON.parse(
-		readFileSync(join(ROOT, "harnesses/pi/agent/settings.json")),
+		readFileSync(join(ROOT, "harnesses/pi/config/settings.json")),
 	);
 	settings.packages.push(SOURCE);
 	writeFileSync(join(f.agentDir, "settings.json"), JSON.stringify(settings));
@@ -132,10 +132,161 @@ function cleanupBackup(f) {
 		.find((path) => existsSync(path));
 }
 
+test("maps the three source categories to Pi runtime paths without installing inactive configs", (t) => {
+	const f = fixture(t);
+	assertSuccess(install(f));
+	const files = {
+		"config/settings.json": ".pi/agent/settings.json",
+		"config/keybindings.json": ".pi/agent/keybindings.json",
+		"builtins/session-ui/index.ts": ".pi/agent/extensions/session-ui/index.ts",
+		"builtins/session-ui/config.ts": ".pi/agent/extensions/session-ui/config.ts",
+		"builtins/fast/index.ts": ".pi/agent/extensions/fast/index.ts",
+		"plugin-configs/session-ui/config.json": ".pi/agent/extensions/session-ui/config.json",
+		"plugin-configs/fast/config.json": ".pi/agent/extensions/fast.json",
+		"plugin-configs/pi-subagents/config.json": ".pi/agent/extensions/subagent/config.json",
+		"plugin-configs/pi-subagents/profiles/multimodel-ggk.json": ".pi/agent/profiles/pi-subagents/multimodel-ggk.json",
+		"plugin-configs/pi-lens/config.json": ".pi-lens/config.json",
+		"plugin-configs/web-search/config.json": ".pi/agent/web-search.json",
+		"plugin-configs/sol-pi/config.json": ".pi/agent/sol-pi.json",
+		"plugin-configs/pi-fff/config.json": ".pi/agent/pi-fff.json",
+	};
+	for (const [source, target] of Object.entries(files)) {
+		assert.equal(
+			readFileSync(join(f.home, target), "utf8"),
+			readFileSync(join(ROOT, "harnesses/pi", source), "utf8"),
+			target,
+		);
+	}
+	for (const path of ["builtins", "plugin-configs", "config", "automode.json", "extensions/session-ui.ts", "extensions/pi-auto-review", "extensions/pi-permission-system"]) {
+		assert.equal(existsSync(join(f.agentDir, path)), false, path);
+	}
+	assert.equal(existsSync(join(f.root, "unrelated-agent")), false);
+	assertSuccess(install(f));
+	assert.equal(existsSync(join(f.home, ".agent-config-backups")), false);
+});
+
+test("retired approval plugin configs are absent", () => {
+	const configRoot = join(ROOT, "harnesses/pi/plugin-configs");
+	for (const name of ["automode", "pi-auto-review", "pi-permission-system"]) {
+		assert.equal(existsSync(join(configRoot, name)), false, name);
+	}
+});
+
+test("each builtin owns its index and all relative entry imports stay inside its directory", () => {
+	const root = join(ROOT, "harnesses/pi/builtins");
+	for (const entry of readdirSync(root, { withFileTypes: true })) {
+		assert.ok(entry.isDirectory(), entry.name);
+		const source = readFileSync(join(root, entry.name, "index.ts"), "utf8");
+		for (const [, relativePath] of source.matchAll(/from "(\.[^"]+)"/g)) {
+			assert.ok(relativePath.startsWith("./"), relativePath);
+			assert.ok(existsSync(join(root, entry.name, relativePath)), relativePath);
+		}
+	}
+});
+
+test("a legacy entry alone triggers confirmation and is retired on an otherwise current install", (t) => {
+	const f = fixture(t);
+	assertSuccess(install(f));
+	const legacyEntry = join(f.agentDir, "extensions/session-ui.ts");
+	writeFileSync(legacyEntry, "old standalone entry\n");
+	assertSuccess(install(f, { input: "n\n" }));
+	assert.equal(readFileSync(legacyEntry, "utf8"), "old standalone entry\n");
+	assert.equal(existsSync(join(f.home, ".agent-config-backups")), false);
+	const result = install(f);
+	assertSuccess(result);
+	assert.match(result.stdout, /移除插件：session-ui 旧入口/);
+	assert.equal(existsSync(legacyEntry), false);
+	assert.ok(existsSync(join(f.agentDir, "extensions/session-ui/index.ts")));
+	const backups = readdirSync(join(f.home, ".agent-config-backups"));
+	assert.equal(backups.length, 1);
+	assert.equal(readFileSync(join(f.home, ".agent-config-backups", backups[0], "pi/.pi/agent/extensions/session-ui.ts"), "utf8"), "old standalone entry\n");
+	assertSuccess(install(f));
+	assert.deepEqual(readdirSync(join(f.home, ".agent-config-backups")), backups);
+});
+
+test("replaces managed plugin directories only after consent and backs up obsolete files", (t) => {
+	const f = fixture(t);
+	assertSuccess(install(f));
+	const oldFiles = {
+		"extensions/session-ui.ts": "old standalone entry\n",
+		"extensions/session-ui/obsolete.ts": "old session-ui module\n",
+		"extensions/session-ui/AGENTS.md": "old local rules\n",
+		"extensions/openai-fast/obsolete.ts": "old fast module\n",
+		"extensions/fast/obsolete.ts": "old fast module\n",
+	};
+	const configPath = join(f.agentDir, "extensions/session-ui/config.json");
+	const oldConfig = '{"workAnimation":{"enabled":false}}\n';
+	mkdirSync(join(f.agentDir, "extensions/openai-fast"), { recursive: true });
+	for (const [path, text] of Object.entries(oldFiles)) writeFileSync(join(f.agentDir, path), text);
+	writeFileSync(configPath, oldConfig);
+	writeFileSync(join(f.agentDir, "extensions/unrelated.ts"), "unrelated plugin\n");
+	writeFileSync(join(f.agentDir, "auth.json"), "test credential sentinel\n");
+	mkdirSync(join(f.agentDir, "sessions"));
+	writeFileSync(join(f.agentDir, "sessions/keep.jsonl"), "session sentinel\n");
+
+	assertSuccess(install(f, { input: "n\n" }));
+	for (const [path, text] of Object.entries(oldFiles)) assert.equal(readFileSync(join(f.agentDir, path), "utf8"), text);
+	assert.equal(readFileSync(configPath, "utf8"), oldConfig);
+	assert.equal(existsSync(join(f.home, ".agent-config-backups")), false);
+
+	assertSuccess(install(f));
+	const backupRoot = join(f.home, ".agent-config-backups");
+	const backups = readdirSync(backupRoot);
+	assert.equal(backups.length, 1);
+	const backupAgent = join(backupRoot, backups[0], "pi/.pi/agent");
+	for (const [path, text] of Object.entries(oldFiles)) {
+		assert.equal(existsSync(join(f.agentDir, path)), false);
+		assert.equal(readFileSync(join(backupAgent, path), "utf8"), text);
+	}
+	assert.equal(readFileSync(join(backupAgent, "extensions/session-ui/config.json"), "utf8"), oldConfig);
+	assert.equal(readFileSync(configPath, "utf8"), readFileSync(join(ROOT, "harnesses/pi/plugin-configs/session-ui/config.json"), "utf8"));
+	assert.equal(readFileSync(join(f.agentDir, "extensions/unrelated.ts"), "utf8"), "unrelated plugin\n");
+	assert.equal(readFileSync(join(f.agentDir, "auth.json"), "utf8"), "test credential sentinel\n");
+	assert.equal(readFileSync(join(f.agentDir, "sessions/keep.jsonl"), "utf8"), "session sentinel\n");
+	assertSuccess(install(f));
+	assert.deepEqual(readdirSync(backupRoot), backups);
+});
+
+test("rolls back both code and composed config if deployment fails", (t) => {
+	const f = fixture(t);
+	assertSuccess(install(f));
+	const target = join(f.agentDir, "extensions/session-ui");
+	const oldConfig = '{"workAnimation":{"enabled":false}}\n';
+	writeFileSync(join(target, "config.json"), oldConfig);
+	writeFileSync(join(target, "obsolete.ts"), "old module\n");
+	const legacyEntry = join(f.agentDir, "extensions/session-ui.ts");
+	writeFileSync(legacyEntry, "old standalone entry\n");
+	rmSync(join(target, "index.ts"));
+	const marker = join(f.root, "failed-once");
+	writeFileSync(join(f.bin, "mv"), `#!/usr/bin/env node
+const fs = require("node:fs"), { spawnSync } = require("node:child_process");
+const args = process.argv.slice(2);
+if (args.at(-1) === ${JSON.stringify(target)} && !fs.existsSync(${JSON.stringify(marker)})) {
+ fs.writeFileSync(${JSON.stringify(marker)}, "1");
+ process.exit(1);
+}
+const result = spawnSync("mv", args, { stdio: "inherit", env: { ...process.env, PATH: ${JSON.stringify(process.env.PATH)} } });
+process.exit(result.status ?? 1);
+`, { mode: 0o755 });
+	const result = install(f);
+	assert.notEqual(result.status, 0);
+	assert.match(result.stderr, /安装失败/);
+	assert.equal(readFileSync(legacyEntry, "utf8"), "old standalone entry\n");
+	assert.equal(existsSync(join(target, "index.ts")), false);
+	assert.equal(readFileSync(join(target, "config.json"), "utf8"), oldConfig);
+	assert.equal(readFileSync(join(target, "obsolete.ts"), "utf8"), "old module\n");
+	assert.equal(readFileSync(join(target, "config.ts"), "utf8"), readFileSync(join(ROOT, "harnesses/pi/builtins/session-ui/config.ts"), "utf8"));
+	assert.deepEqual(calls(f), []);
+	assertSuccess(install(f));
+	assert.equal(existsSync(join(target, "obsolete.ts")), false);
+	assert.equal(existsSync(legacyEntry), false);
+	assert.equal(existsSync(join(target, "index.ts")), true);
+});
+
 test("fresh and repeat installs deploy SoL-Pi without invoking package removal", (t) => {
 	const f = fixture(t);
 	const source = readFileSync(
-		join(ROOT, "harnesses/pi/agent/sol-pi.json"),
+		join(ROOT, "harnesses/pi/plugin-configs/sol-pi/config.json"),
 		"utf8",
 	);
 	assert.deepEqual(JSON.parse(source), {
@@ -147,7 +298,7 @@ test("fresh and repeat installs deploy SoL-Pi without invoking package removal",
 		cacheWriteReadRatio: 12.5,
 	});
 	assertSuccess(install(f));
-	assert.ok(existsSync(join(f.agentDir, "extensions/openai-fast/index.ts")));
+	assert.ok(existsSync(join(f.agentDir, "extensions/fast/index.ts")));
 	assert.equal(readFileSync(join(f.agentDir, "sol-pi.json"), "utf8"), source);
 	const settings = JSON.parse(readFileSync(join(f.agentDir, "settings.json")));
 	assert.ok(settings.packages.includes("git:github.com/NVlabs/SoL-Pi"));
@@ -161,7 +312,7 @@ test("fresh and repeat installs copy the multimodel profile without activating i
 	const f = fixture(t);
 	const relativePath = "profiles/pi-subagents/multimodel-ggk.json";
 	const source = readFileSync(
-		join(ROOT, "harnesses/pi/agent", relativePath),
+		join(ROOT, "harnesses/pi/plugin-configs/pi-subagents/profiles/multimodel-ggk.json"),
 		"utf8",
 	);
 	for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -208,7 +359,7 @@ test("SoL-Pi conflicts require consent and preserve the previous config in backu
 test("fresh and repeat installs deploy FFF config into the target agent directory", (t) => {
 	const f = fixture(t);
 	const source = readFileSync(
-		join(ROOT, "harnesses/pi/agent/pi-fff.json"),
+		join(ROOT, "harnesses/pi/plugin-configs/pi-fff/config.json"),
 		"utf8",
 	);
 	assert.deepEqual(JSON.parse(source), {
@@ -244,7 +395,7 @@ test("FFF config conflicts require consent and preserve the previous config in b
 	assertSuccess(install(f));
 	assert.equal(
 		readFileSync(target, "utf8"),
-		readFileSync(join(ROOT, "harnesses/pi/agent/pi-fff.json"), "utf8"),
+		readFileSync(join(ROOT, "harnesses/pi/plugin-configs/pi-fff/config.json"), "utf8"),
 	);
 	const backupRoot = join(f.home, ".agent-config-backups");
 	const backups = readdirSync(backupRoot);
@@ -279,7 +430,7 @@ test("installs replacement before uninstalling the exact old package and preserv
 	);
 	assert.ok(existsSync(join(backup, "package-lock.json")));
 	assert.equal(
-		JSON.parse(readFileSync(join(f.agentDir, "extensions/openai-fast.json")))
+		JSON.parse(readFileSync(join(f.agentDir, "extensions/fast.json")))
 			.enabled,
 		true,
 	);
@@ -309,8 +460,15 @@ test("declining installation leaves the old plugin and manifests untouched", (t)
 		readFileSync(join(f.agentDir, "npm/package.json"), "utf8"),
 		manifest,
 	);
+	mkdirSync(join(f.agentDir, "extensions/openai-fast"), { recursive: true });
+	writeFileSync(join(f.agentDir, "extensions/openai-fast/index.ts"), "old fast entry\n");
+	assertSuccess(install(f, { input: "n\n" }));
 	assert.equal(
-		existsSync(join(f.agentDir, "extensions/openai-fast/index.ts")),
+		readFileSync(join(f.agentDir, "extensions/openai-fast/index.ts"), "utf8"),
+		"old fast entry\n",
+	);
+	assert.equal(
+		existsSync(join(f.agentDir, "extensions/fast/index.ts")),
 		false,
 	);
 });
@@ -353,7 +511,7 @@ test("cleanup failure is reported, keeps the new files and backup, and permits a
 	assert.notEqual(result.status, 0, result.stdout + result.stderr);
 	assert.match(result.stderr, /卸载失败/);
 	assert.ok(existsSync(f.packageDir));
-	assert.ok(existsSync(join(f.agentDir, "extensions/openai-fast/index.ts")));
+	assert.ok(existsSync(join(f.agentDir, "extensions/fast/index.ts")));
 	assert.ok(cleanupBackup(f));
 	assertSuccess(install(f));
 	assert.equal(calls(f).length, 2);

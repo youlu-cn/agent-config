@@ -1,0 +1,39 @@
+{
+	"theme": "light/dark",
+	"enabledModels": [
+		"openai-codex/gpt-6-astra",
+		"openai-codex/gpt-5.6-sol",
+		"kimi-coding/k3",
+		"xai/grok-4.7",
+		"antigravity/gemini-3.8-flash",
+		"antigravity/claude-opus-4-6"
+	],
+	"externalEditor": "nvim",
+	"collapseChangelog": true,
+	"showHardwareCursor": true,
+	"autocompleteMaxVisible": 8,
+	"steeringMode": "all",
+	"followUpMode": "all",
+	"compaction": {
+		"keepRecentTokens": 80000
+	},
+	"packages": [
+		"npm:pi-subagents",
+		"npm:pi-web-access",
+		"npm:@juicesharp/rpiv-ask-user-question",
+		"npm:pi-lens",
+		"npm:pi-mcp-adapter",
+		"npm:@specode/pi-kimi-cu",
+		"npm:@specode/pi-kimi-webbridge-bootstrap",
+		"npm:@specode/pi-last-model-effort",
+		"npm:@specode/pi-subscription-usage",
+		"npm:@specode/pi-subscription-image",
+		"npm:pi-antigravity",
+		"npm:@ff-labs/pi-fff",
+		"git:github.com/NVlabs/SoL-Pi"
+	],
+	"hideThinkingBlock": true,
+	"fullscreenScrollbar": "auto",
+	"tuiMode": "fullscreen",
+	"treeFilterMode": "no-tools"
+}
