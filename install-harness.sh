@@ -178,11 +178,23 @@ retire_legacy_pi_web_search() {
 	info "旧的 ~/.pi/web-search.json 已迁移到备份，配置改由 ~/.pi/agent/web-search.json 提供"
 }
 
-legacy_pi_openai_fast_present() {
+legacy_pi_package_present() {
 	local agent_dir="$1"
-	local package_name='@diegopetrucci/pi-openai-fast'
+	local package_name="$2"
 	local package_dir="$agent_dir/npm/node_modules/$package_name"
 	local npm_manifest="$agent_dir/npm/package.json"
+	# Never let npm traverse links into another installation.
+	node - "$agent_dir" "$package_name" <<'NODE' || return 1
+const fs = require("node:fs"), path = require("node:path");
+const agent = path.resolve(process.argv[2]);
+const targets = [agent, path.join(agent, "npm"), path.join(agent, "npm/package.json"), path.join(agent, "npm/package-lock.json"), path.join(agent, "npm/node_modules")];
+let current = path.join(agent, "npm/node_modules");
+for (const part of process.argv[3].split("/")) { current = path.join(current, part); targets.push(current); }
+for (const target of targets) {
+ try { if (fs.lstatSync(target).isSymbolicLink()) throw new Error(`Refusing package cleanup through symlink: ${target}`); }
+ catch (error) { if (error.code !== "ENOENT") throw error; }
+}
+NODE
 	if [ -e "$package_dir" ] || [ -L "$package_dir" ]; then
 		printf '1'
 		return 0
@@ -192,7 +204,7 @@ legacy_pi_openai_fast_present() {
 		return 0
 	fi
 	if ! command -v node >/dev/null 2>&1; then
-		error '检查旧 OpenAI Fast 安装需要 node；新配置已安装，请补齐后重试'
+		error '检查旧插件安装需要 node；新配置已安装，请补齐后重试'
 		return 1
 	fi
 	node - "$npm_manifest" "$package_name" <<'NODE'
@@ -210,19 +222,19 @@ try {
 NODE
 }
 
-retire_removed_pi_openai_fast() {
+retire_removed_pi_package() {
 	[ "${INSTALL_MANAGED_DECLINED:-0}" -eq 0 ] || return 0
 
 	local agent_dir="$AGENT_CONFIG_INSTALL_HOME/.pi/agent"
-	local package_name='@diegopetrucci/pi-openai-fast'
+	local package_name="$1" label="$2" backup_name="$3"
 	local package_dir="$agent_dir/npm/node_modules/$package_name"
-	local backup_dir="$BACKUP_ROOT/pi-retired/openai-fast-package"
+	local backup_dir="$BACKUP_ROOT/pi-retired/$backup_name"
 	local present name remove_status=0
-	present="$(legacy_pi_openai_fast_present "$agent_dir")"
+	present="$(legacy_pi_package_present "$agent_dir" "$package_name")"
 	[ "$present" = '1' ] || return 0
 
 	if ! command -v pi >/dev/null 2>&1; then
-		error '卸载旧 OpenAI Fast 需要 pi；新配置已安装，请补齐后重试'
+		error "卸载旧 $label 需要 pi；新配置已安装，请补齐后重试"
 		return 1
 	fi
 
@@ -245,9 +257,9 @@ retire_removed_pi_openai_fast() {
 			npm_config_ignore_scripts=true npm_config_audit=false npm_config_fund=false \
 			pi remove "npm:$package_name" --no-approve
 	) || remove_status=$?
-	present="$(legacy_pi_openai_fast_present "$agent_dir")"
+	present="$(legacy_pi_package_present "$agent_dir" "$package_name")"
 	if [ "$present" = '1' ]; then
-		error "旧 OpenAI Fast 卸载失败，仍有残留（命令退出码 ${remove_status}）；新配置保留，备份位于 ${backup_dir}。修复后重跑安装器"
+		error "旧 $label 卸载失败，仍有残留（命令退出码 ${remove_status}）；新配置保留，备份位于 ${backup_dir}。修复后重跑安装器"
 		return 1
 	fi
 	# Pi may return nonzero after successful uninstall when settings were already migrated.
@@ -286,6 +298,9 @@ claude-code)
 pi)
 	HARNESS_LABEL='Pi'
 	prepare_pi_session_ui
+	PI_SOL_RETIRED_MANIFEST="$INSTALL_TEMP_ROOT/pi-sol-retired"
+	# Plan only within the install target; retire paths in the shared transaction.
+	node "$AGENT_CONFIG_ROOT/lib/pi-sol-pi-cleanup.mjs" "$AGENT_CONFIG_INSTALL_HOME" >"$PI_SOL_RETIRED_MANIFEST"
 	managed_entries() {
 		printf '%s\n' \
 			'harnesses/pi/config/settings.json|.pi/agent/settings.json|file|-|配置|通用设置' \
@@ -297,11 +312,12 @@ pi)
 			'harnesses/pi/builtins/fast|.pi/agent/extensions/fast|directory|-|插件|Fast' \
 			'harnesses/pi/plugin-configs/fast/config.json|.pi/agent/extensions/fast.json|file|-|配置|Fast' \
 			'harnesses/pi/plugin-configs/pi-subagents/config.json|.pi/agent/extensions/subagent/config.json|file|-|配置|子代理策略' \
-			'harnesses/pi/plugin-configs/pi-subagents/profiles/multimodel-ggk.json|.pi/agent/profiles/pi-subagents/multimodel-ggk.json|file|-|配置|多模型 Profile' \
-			'harnesses/pi/plugin-configs/sol-pi/config.json|.pi/agent/sol-pi.json|file|-|配置|SoL-Pi' \
+			'-|.pi/agent/profiles/pi-subagents/multimodel-ggk.json|absent|-|配置|多模型 Profile 旧文件' \
+			'harnesses/pi/plugin-configs/pi-subagents/profiles/multimodel.json|.pi/agent/profiles/pi-subagents/multimodel.json|file|-|配置|多模型 Profile' \
 			'harnesses/pi/plugin-configs/pi-fff/config.json|.pi/agent/pi-fff.json|file|-|配置|FFF' \
 			'harnesses/pi/plugin-configs/web-search/config.json|.pi/agent/web-search.json|file|-|配置|Web Search' \
 			'harnesses/pi/plugin-configs/pi-lens/config.json|.pi-lens/config.json|file|-|配置|Pi Lens'
+		cat "$PI_SOL_RETIRED_MANIFEST"
 	}
 	;;
 -h | --help)
@@ -317,9 +333,24 @@ esac
 
 install_managed_group "$HARNESS_ID" "$HARNESS_LABEL"
 if [ "$HARNESS_ID" = 'pi' ]; then
+	if [ "${INSTALL_MANAGED_DECLINED:-0}" -eq 0 ]; then
+		if ! node "$AGENT_CONFIG_ROOT/lib/pi-sol-pi-cleanup.mjs" "$AGENT_CONFIG_INSTALL_HOME" >"$INSTALL_TEMP_ROOT/pi-sol-remaining"; then
+			error "SoL-Pi 清理复核失败；新配置及备份已保留，请检查 $BACKUP_ROOT 后重试"
+			exit 1
+		fi
+		if [ -s "$INSTALL_TEMP_ROOT/pi-sol-remaining" ]; then
+			error "SoL-Pi 仍有残留；新配置及备份已保留在 ${BACKUP_ROOT}，请退出仍加载旧插件的 Pi 进程后重跑安装器"
+			exit 1
+		fi
+		if [ -s "$PI_SOL_RETIRED_MANIFEST" ]; then
+			info "旧 SoL-Pi 安装包、配置和专属缓存已移至备份：$BACKUP_ROOT/pi"
+			warn '仍加载 SoL-Pi 的进程可能重建缓存；请退出这些 Pi 进程后重跑安装器复查'
+		fi
+	fi
 	retire_legacy_pi_work_animation
 	retire_removed_pi_image_gen
-	retire_removed_pi_openai_fast
+	retire_removed_pi_package '@diegopetrucci/pi-openai-fast' 'OpenAI Fast' 'openai-fast-package'
+	retire_removed_pi_package 'pi-mcp-adapter' 'MCP adapter' 'mcp-adapter-package'
 	retire_legacy_pi_web_search
 fi
 if [ "${INSTALL_MANAGED_CHANGED:-0}" -eq 1 ]; then

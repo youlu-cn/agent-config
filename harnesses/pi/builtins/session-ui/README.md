@@ -26,7 +26,7 @@
 
 | 功能 | 使用方式 |
 | --- | --- |
-| 工具活动 | 在编辑器附近显示本轮最近的工具执行状态，本轮结束后清空；正式结果仍在对话记录中 |
+| 工具活动 | 在编辑器附近显示本轮最近的工具执行状态，本轮结束后清空；正式结果仍在对话记录中。Codemode 脚本发起的调用缩进显示在该 Codemode 下，Codemode 行显示调用数与失败数 |
 | 工作动画 | 工作时显示动画并更新终端标题；`/work-animation on` 或 `off` 开关，`status` 查询 |
 | 图片预览 | 粘贴图片后，将光标移入图片标签即可预览 |
 | 状态栏 | 显示模型、思考档位、目录、分支、用量等；`/statusline` 临时切换 |
@@ -45,6 +45,8 @@ Recap 描述**同一个连续任务截至当前的整体进展**，结合相关�
 摘要区分需求已确认、方案已提出或确定、代码已实现和结果已验证。仅讨论时只描述已澄清、已决定和未解决的事项，不把建议或计划写成已经实施、测试通过。
 
 展示位置、样式和时机保持不变：在本轮结束后追加到对话记录中，不使用编辑器 widget，不覆盖历史摘要。任务归属与内容由主模型根据可用上下文判断；Recap 不重新注入模型上下文，也不替代验证证据。模型未提供有效摘要时不生成 Recap；标题缺失时保留上一标题，不影响正常回答。
+
+正常结束的回答未产生 Recap 时，会在会话文件中追加一条 `session-ui:recap-miss` 诊断记录，不显示、不进入模型上下文。`reason` 为 `missing`（未输出）、`invalid`（格式无效，附截断片段）、`misplaced`（记录后还有正文）或 `early`（写在带工具调用的中间回答里）。中断、出错的回答不记录。可用 `grep -h '"session-ui:recap-miss"' ~/.pi/agent/sessions/*/*.jsonl` 查看。
 
 默认情况下，手工 `/name` 命名会阻止后续自动覆盖会话名称，但任务标题仍可更新。目前不提供 `/unname`；可通过配置关闭手工命名锁。
 
@@ -65,7 +67,7 @@ PI_SESSION_UI_CONFIG=/absolute/path/to/session-ui.json pi
 | 配置路径 | 可选值／默认值 | 说明 |
 | --- | --- | --- |
 | `toolActivity.placement` | `aboveEditor`（默认）／`belowEditor` | 工具活动位置 |
-| `toolActivity.maxItems` | 1–20；默认 6 | 最近工具展示数量 |
+| `toolActivity.maxItems` | 1–20；默认 6 | 最多展示行数：先展示最近的顶层调用，剩余行数给嵌套调用，较早的嵌套调用折叠为一行 |
 | `workAnimation.placement` | `aboveEditor`（默认）／`belowEditor` | 工作动画位置 |
 | `workAnimation.intervalMs` | 100–500；默认 180 | 动画刷新间隔，单位毫秒 |
 | `statusline.overflow` | `drop-right`（默认）／`priority` | 空间不足时从右侧隐藏，或先压缩再按优先级隐藏 |
@@ -111,8 +113,9 @@ PI_SESSION_UI_CONFIG=/absolute/path/to/session-ui.json pi
 | `tokens` | 当前会话累计输入／输出 token，仓库配置已关闭 |
 | `cache` | 当前、最近五次 assistant 请求及会话的缓存命中率 |
 | `cost` | 当前会话已记录的费用估算；没有费用记录时显示 `$0.000` |
-| `mcp` | MCP 已连接／已启用数量及可用服务名称 |
 | `extensions` | 未被排除的其他扩展状态 |
+
+Pi 0.99.1 内置 MCP 尚未提供公开的连接状态接口，暂不显示 MCP 状态段。请通过 `/mcp` 查看真实连接状态；自定义配置中需移除旧的 `mcp` 段。
 
 例如，只显示模型、思考档位、目录和上下文：
 

@@ -1,13 +1,13 @@
 {
-	"theme": "light/dark",
+	"theme": "system",
 	"enabledModels": [
 		"openai-codex/gpt-6-astra",
-		"openai-codex/gpt-6-sol",
+		"openai-codex/gpt-6.1-sol",
 		"xai/grok-4.7",
-		"kimi-coding/k3",
 		"antigravity/gemini-3.8-flash",
 		"antigravity/claude-opus-4-6"
 	],
+	"defaultTools": ["+codemode"],
 	"externalEditor": "nvim",
 	"collapseChangelog": true,
 	"showHardwareCursor": true,
@@ -22,15 +22,13 @@
 		"npm:pi-web-access",
 		"npm:@juicesharp/rpiv-ask-user-question",
 		"npm:pi-lens",
-		"npm:pi-mcp-adapter",
 		"npm:@specode/pi-kimi-cu",
 		"npm:@specode/pi-kimi-webbridge-bootstrap",
 		"npm:@specode/pi-last-model-effort",
 		"npm:@specode/pi-subscription-usage",
 		"npm:@specode/pi-subscription-image",
 		"npm:pi-antigravity",
-		"npm:@ff-labs/pi-fff",
-		"git:github.com/NVlabs/SoL-Pi"
+		"npm:@ff-labs/pi-fff"
 	],
 	"hideThinkingBlock": true,
 	"fullscreenScrollbar": "auto",
