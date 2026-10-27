@@ -55,18 +55,23 @@ function backupAgent(f) {
 	return join(root, backups[0], "pi/.pi/agent");
 }
 
-test("installs the xAI and DeepSeek model order with Grok as default", (t) => {
+test("installs Claude Bridge, xAI, DeepSeek, and Cursor Auto with Grok as default", (t) => {
 	const f = fixture(t);
 	assertSuccess(install(f));
 	const settings = JSON.parse(readFileSync(join(f.agentDir, "settings.json"), "utf8"));
 	assert.deepEqual(settings.enabledModels, [
+		"claude-bridge/claude-opus-5-5",
+		"claude-bridge/claude-sonnet-5-5",
 		"xai/grok-4.7",
 		"deepseek/deepseek-v4-pro",
 		"deepseek/deepseek-flash",
+		"cursor/default",
 	]);
 	assert.equal(settings.defaultProvider, "xai");
 	assert.equal(settings.defaultModel, "grok-4.7");
-	assert.equal(settings.packages.includes("npm:pi-claude-bridge"), false);
+	assert.equal(settings.packages.includes("npm:pi-claude-bridge"), true);
+	assert.equal(settings.packages.includes("npm:pi-cursor-sdk"), true);
+	assert.equal(settings.packages.includes("npm:pi-cursor-provider"), false);
 });
 
 test("declares the upstream subagent Git package without a pinned ref", (t) => {

@@ -3,9 +3,12 @@
 	"defaultProvider": "xai",
 	"defaultModel": "grok-4.7",
 	"enabledModels": [
+		"claude-bridge/claude-opus-5-5",
+		"claude-bridge/claude-sonnet-5-5",
 		"xai/grok-4.7",
 		"deepseek/deepseek-v4-pro",
-		"deepseek/deepseek-flash"
+		"deepseek/deepseek-flash",
+		"cursor/default"
 	],
 	"defaultTools": ["+codemode"],
 	"externalEditor": "nvim",
@@ -22,6 +25,8 @@
 		"npm:@juicesharp/rpiv-ask-user-question",
 		"git:github.com/badlogic/pi-subagent",
 		"npm:@ff-labs/pi-fff",
+		"npm:pi-claude-bridge",
+		"npm:pi-cursor-sdk",
 		"npm:@specode/pi-last-model-effort",
 		"npm:@specode/pi-subscription-usage",
 		"npm:@specode/pi-kimi-webbridge-bootstrap",
