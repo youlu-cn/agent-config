@@ -20,13 +20,14 @@
 	"packages": [
 		"npm:pi-web-access",
 		"npm:@juicesharp/rpiv-ask-user-question",
-		"npm:@specode/pi-kimi-cu",
-		"npm:@specode/pi-kimi-webbridge-bootstrap",
+		"git:github.com/badlogic/pi-subagent",
+		"npm:@ff-labs/pi-fff",
 		"npm:@specode/pi-last-model-effort",
 		"npm:@specode/pi-subscription-usage",
+		"npm:@specode/pi-kimi-webbridge-bootstrap",
+		"npm:@specode/pi-kimi-cu",
 		"npm:@specode/pi-subscription-image",
-		"npm:pi-antigravity",
-		"npm:@ff-labs/pi-fff"
+		"npm:pi-antigravity"
 	],
 	"hideThinkingBlock": true,
 	"fullscreenScrollbar": "auto",
