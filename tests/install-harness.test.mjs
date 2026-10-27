@@ -55,22 +55,17 @@ function backupAgent(f) {
 	return join(root, backups[0], "pi/.pi/agent");
 }
 
-test("installs the remaining model order without Claude Bridge", (t) => {
+test("installs the xAI and DeepSeek model order with Grok as default", (t) => {
 	const f = fixture(t);
 	assertSuccess(install(f));
 	const settings = JSON.parse(readFileSync(join(f.agentDir, "settings.json"), "utf8"));
-	assert.deepEqual(
-		settings.enabledModels,
-		[
-			"openai-codex/gpt-6-astra",
-			"openai-codex/gpt-6.1-sol",
-			"xai/grok-4.7",
-			"antigravity/gemini-4-argon",
-			"antigravity/gemini-3.8-flash",
-			"antigravity/claude-opus-5-5",
-			"antigravity/claude-sonnet-5-5",
-		],
-	);
+	assert.deepEqual(settings.enabledModels, [
+		"xai/grok-4.7",
+		"deepseek/deepseek-v4-pro",
+		"deepseek/deepseek-flash",
+	]);
+	assert.equal(settings.defaultProvider, "xai");
+	assert.equal(settings.defaultModel, "grok-4.7");
 	assert.equal(settings.packages.includes("npm:pi-claude-bridge"), false);
 });
 
@@ -85,34 +80,14 @@ test("does not declare or deploy interactive shell", (t) => {
 	assert.deepEqual(calls(f), []);
 });
 
-test("installs only the two requested Codex context overrides", (t) => {
-	const f = fixture(t);
-	assertSuccess(install(f));
-	const target = join(f.agentDir, "models.json");
-	assert.equal(lstatSync(target).isSymbolicLink(), false);
-	assert.deepEqual(JSON.parse(readFileSync(target, "utf8")), {
-		providers: {
-			"openai-codex": {
-				modelOverrides: {
-					"gpt-6-astra": { contextWindow: 500000 },
-					"gpt-6.1-sol": { contextWindow: 500000 },
-				},
-			},
-		},
-	});
-});
-
-test("model overrides require consent and back up the complete previous file", (t) => {
+test("leaves a pre-existing models.json untouched", (t) => {
 	const f = fixture(t);
 	const target = join(f.agentDir, "models.json");
 	const previous = '{"providers":{"custom":{"models":[{"id":"local"}]}}}\n';
 	writeFileSync(target, previous);
-	assertSuccess(install(f, { input: "n\n" }));
+	assertSuccess(install(f));
 	assert.equal(readFileSync(target, "utf8"), previous);
 	assert.equal(existsSync(join(f.home, ".agent-config-backups")), false);
-	assertSuccess(install(f));
-	assert.equal(readFileSync(join(backupAgent(f), "models.json"), "utf8"), previous);
-	assert.equal(readFileSync(target, "utf8"), readFileSync(join(ROOT, "harnesses/pi/config/models.json"), "utf8"));
 });
 
 test("maps the three source categories to Pi runtime paths without installing inactive configs", (t) => {
@@ -120,7 +95,6 @@ test("maps the three source categories to Pi runtime paths without installing in
 	assertSuccess(install(f));
 	const files = {
 		"config/settings.json": ".pi/agent/settings.json",
-		"config/models.json": ".pi/agent/models.json",
 		"config/keybindings.json": ".pi/agent/keybindings.json",
 		"builtins/session-ui/index.ts": ".pi/agent/extensions/session-ui/index.ts",
 		"builtins/session-ui/config.ts": ".pi/agent/extensions/session-ui/config.ts",
@@ -218,11 +192,11 @@ test("replaces managed plugin directories only after consent and backs up obsole
 	assert.deepEqual(readdirSync(backupRoot), backups);
 });
 
-test("rolls back models, code and composed config if deployment fails", (t) => {
+test("rolls back managed config, code and composed plugin config if deployment fails", (t) => {
 	const f = fixture(t);
 	assertSuccess(install(f));
-	const oldModels = '{"providers":{}}\n';
-	writeFileSync(join(f.agentDir, "models.json"), oldModels);
+	const previousWebSearch = '{"workflow":"none"}\n';
+	writeFileSync(join(f.agentDir, "web-search.json"), previousWebSearch);
 	const target = join(f.agentDir, "extensions/session-ui");
 	const oldConfig = '{"workAnimation":{"enabled":false}}\n';
 	writeFileSync(join(target, "config.json"), oldConfig);
@@ -242,7 +216,7 @@ process.exit(result.status ?? 1);
 	const result = install(f);
 	assert.notEqual(result.status, 0);
 	assert.match(result.stderr, /安装失败/);
-	assert.equal(readFileSync(join(f.agentDir, "models.json"), "utf8"), oldModels);
+	assert.equal(readFileSync(join(f.agentDir, "web-search.json"), "utf8"), previousWebSearch);
 	assert.equal(existsSync(join(target, "index.ts")), false);
 	assert.equal(readFileSync(join(target, "config.json"), "utf8"), oldConfig);
 	assert.equal(readFileSync(join(target, "obsolete.ts"), "utf8"), "old module\n");
@@ -355,7 +329,7 @@ test("repository symlinks require consent like other conflicts", (t) => {
  symlinkSync(join(ROOT, "harnesses/pi/config/settings.json"), target);
  assertSuccess(install(f, { input: "n\n" }));
  assert.ok(lstatSync(target).isSymbolicLink());
- assert.equal(existsSync(join(f.agentDir, "models.json")), false);
+ assert.equal(existsSync(join(f.agentDir, "web-search.json")), false);
  assertSuccess(install(f));
  assert.equal(lstatSync(target).isSymbolicLink(), false);
  assert.ok(lstatSync(join(backupAgent(f), "settings.json")).isSymbolicLink());

@@ -2,7 +2,7 @@
 	"workflow": "auto-summary",
 	"allowBrowserCookies": false,
 	"searchRouting": {
-		"providers": ["openai", "xai", "kimi"],
+		"providers": ["xai"],
 		"fallbackOn": ["transient", "quota", "network", "invalid-response"]
 	},
 	"ssrf": {

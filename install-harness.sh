@@ -67,7 +67,6 @@ pi)
 	managed_entries() {
 		printf '%s\n' \
 			'harnesses/pi/config/settings.json|.pi/agent/settings.json|file|-|配置|通用设置' \
-			'harnesses/pi/config/models.json|.pi/agent/models.json|file|-|配置|模型覆盖' \
 			'harnesses/pi/config/keybindings.json|.pi/agent/keybindings.json|file|-|配置|快捷键' \
 			"$PI_SESSION_UI_SOURCE|.pi/agent/extensions/session-ui|directory|-|插件|session-ui" \
 			'harnesses/pi/builtins/fast|.pi/agent/extensions/fast|directory|-|插件|Fast' \

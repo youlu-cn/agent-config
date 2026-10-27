@@ -24,6 +24,7 @@
 
 个人默认值：
 - Pi 使用全屏 TUI、跟随终端配色的 `system` 主题，隐藏 thinking 正文，外部编辑器为 `nvim`。
+- Pi 默认模型为 Grok 4.7（`xai/grok-4.7`），模型清单只含 xAI 与 DeepSeek。
 - Fast 默认关闭；开启可能增加订阅额度消耗。
 - Claude Code 使用 `auto` 权限模式、`high` 思考档位和自动上下文压缩。
 
@@ -83,13 +84,9 @@ Antigravity 也提供 Google 搜索与图片生成；需要这条通道时直接
 
 #### 模型与 Fast
 
-通过 `/login` 登录 provider，`/model` 选择模型。GPT 使用 `openai-codex`；Antigravity 模型由 `pi-antigravity` 提供，可用 `/antigravity.refresh` 刷新目录。
+通过 `/login` 登录 provider，`/model` 选择模型。当前只使用 xAI 与 DeepSeek：启动模型为 `xai/grok-4.7`，轮换顺序为 Grok 4.7 → DeepSeek V4 Pro → DeepSeek V4.1 Flash，具体范围见 [settings.json](harnesses/pi/config/settings.json)。除此之外的模型（含 Codex GPT、Kimi、Antigravity 目录）不进入轮换；`pi-antigravity` 插件仍保留，用于 Google 搜索与图片生成。
 
-仓库模型轮换顺序为 GPT-6 Astra → GPT-6.1 Sol → Grok 4.7 → Antigravity 模型。具体范围见 [settings.json](harnesses/pi/config/settings.json)，列入清单不代表账号已获授权。
-
-[Fast](harnesses/pi/builtins/fast/README.md) 通过 `/fast` 切换，`/fast status` 查询，`/fast off` 关闭。开关按 provider 保存在 `~/.pi/agent/state/fast.json`；`fast` 标记表示本地已启用，不保证后端实际加速。
-
-[models.json](harnesses/pi/config/models.json) 将两个 Codex GPT 模型的本地上下文预算设为 500K tokens，不改变输出上限，也不保证后端支持同等窗口。安装器整体替换该文件；如有自定义模型，请先整合。
+[Fast](harnesses/pi/builtins/fast/README.md) 通过 `/fast` 切换，`/fast status` 查询，`/fast off` 关闭。开关按 provider 保存在 `~/.pi/agent/state/fast.json`；`fast` 标记表示本地已启用，不保证后端实际加速。Grok Fast 依赖 xAI 会话，GPT Fast 在当前模型清单外不会生效。
 
 #### Codemode 与 MCP
 
@@ -108,7 +105,8 @@ Codemode 不限制被调用工具的实际权限；不要并行修改同一文�
 
 - [基础设置](harnesses/pi/config/settings.json) → `~/.pi/agent/settings.json`
 - [快捷键](harnesses/pi/config/keybindings.json) → `~/.pi/agent/keybindings.json`
-- [模型覆盖](harnesses/pi/config/models.json) → `~/.pi/agent/models.json`
+
+模型覆盖写在 `~/.pi/agent/models.json`，仓库不再托管该文件，安装器不会覆盖本地已有内容。
 
 `Ctrl+L` 打开模型选择器；全屏模式下 `Alt+K`／`Alt+J` 翻整页，`Alt+,`／`Alt+.` 滚动到顶部／底部。手动修改配置后执行 `/reload`。
 

@@ -1,13 +1,11 @@
 {
 	"theme": "system",
+	"defaultProvider": "xai",
+	"defaultModel": "grok-4.7",
 	"enabledModels": [
-		"openai-codex/gpt-6-astra",
-		"openai-codex/gpt-6.1-sol",
 		"xai/grok-4.7",
-		"antigravity/gemini-4-argon",
-		"antigravity/gemini-3.8-flash",
-		"antigravity/claude-opus-5-5",
-		"antigravity/claude-sonnet-5-5"
+		"deepseek/deepseek-v4-pro",
+		"deepseek/deepseek-flash"
 	],
 	"defaultTools": ["+codemode"],
 	"externalEditor": "nvim",
