@@ -33,6 +33,11 @@
   项目已有 compose 或镜像配置时优先复用。
 - 项目规则另有指定、或 Docker 不可用 / 成本明显不合理时，
   可改用本地工具链，但应说明原因。
+- 新建 Dockerfile / compose 时，常用基础镜像默认使用：
+  `golang:1.26-alpine`（需 glibc / CGO 时用 `golang:1.26-bookworm`）、
+  `alpine:3.24`、`mysql:8.4`、`redis:7-alpine`、`postgres:16-alpine`、`nginx:1.30-alpine`；
+  其他镜像优先复用本机已有 tag，不使用 `latest` 或省略 tag。
+  项目已固定版本时以项目为准，不擅自升级或降级。
 - agent 启动的服务或测试进程须前台运行并管理生命周期，
   任务结束时退出，不留后台残留进程。
 
