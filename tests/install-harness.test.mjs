@@ -72,6 +72,7 @@ test("installs Claude Bridge, xAI, DeepSeek, and Cursor Auto with Grok as defaul
 	assert.equal(settings.packages.includes("npm:pi-claude-bridge"), true);
 	assert.equal(settings.packages.includes("npm:pi-cursor-sdk"), true);
 	assert.equal(settings.packages.includes("npm:pi-cursor-provider"), false);
+	assert.equal(settings.packages.includes("npm:@sentiolabs/pi-frontend-design"), true);
 });
 
 test("declares the upstream subagent Git package without a pinned ref", (t) => {

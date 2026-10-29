@@ -88,6 +88,7 @@ Codex、Kimi、Antigravity 与 Google Gemini 都不进入轮换；`pi-antigravit
 | `pi-kimi-webbridge-bootstrap` | 操作已登录的日常浏览器（需安装并连接配套浏览器扩展） |
 | `pi-kimi-cu` | 操作 macOS 桌面应用（需授予辅助功能与录屏权限） |
 | `pi-subscription-image` | 用 Codex 或 Grok 订阅生图；带参考图编辑时走 Codex |
+| `pi-frontend-design` | 做界面时使用 `frontend-design` 技能，避免通用 AI 审美；也可直接用 `/frontend-design` |
 
 Antigravity 也带 Google 搜索和生图功能，想走这条通道时在提问里直接说明即可。
 
