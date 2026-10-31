@@ -55,20 +55,25 @@ function backupAgent(f) {
 	return join(root, backups[0], "pi/.pi/agent");
 }
 
-test("installs Claude Bridge, xAI, DeepSeek, and Cursor Auto with Grok as default", (t) => {
+test("installs Antigravity Gemini 3.8 Flash as the default with high thinking", (t) => {
 	const f = fixture(t);
 	assertSuccess(install(f));
 	const settings = JSON.parse(readFileSync(join(f.agentDir, "settings.json"), "utf8"));
 	assert.deepEqual(settings.enabledModels, [
-		"claude-bridge/claude-opus-5-5",
-		"claude-bridge/claude-sonnet-5-5",
+		"antigravity/gemini-3.8-flash",
+		"antigravity/gemini-4-argon",
 		"xai/grok-4.7",
 		"deepseek/deepseek-v4-pro",
 		"deepseek/deepseek-flash",
 		"cursor/default",
 	]);
-	assert.equal(settings.defaultProvider, "xai");
-	assert.equal(settings.defaultModel, "grok-4.7");
+	assert.equal(settings.enabledModels.includes("claude-bridge/claude-opus-5-5"), false);
+	assert.equal(settings.enabledModels.includes("claude-bridge/claude-sonnet-5-5"), false);
+	assert.equal(settings.defaultProvider, "antigravity");
+	assert.equal(settings.defaultModel, "gemini-3.8-flash");
+	assert.equal(settings.defaultThinkingLevel, "medium");
+	assert.equal(settings.modelThinkingLevels["antigravity/gemini-3.8-flash"], "high");
+	assert.equal(settings.packages.includes("npm:pi-antigravity"), true);
 	assert.equal(settings.packages.includes("npm:pi-claude-bridge"), true);
 	assert.equal(settings.packages.includes("npm:pi-cursor-sdk"), true);
 	assert.equal(settings.packages.includes("npm:pi-cursor-provider"), false);

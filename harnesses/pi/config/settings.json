@@ -1,10 +1,14 @@
 {
 	"theme": "system",
-	"defaultProvider": "xai",
-	"defaultModel": "grok-4.7",
+	"defaultProvider": "antigravity",
+	"defaultModel": "gemini-3.8-flash",
+	"defaultThinkingLevel": "medium",
+	"modelThinkingLevels": {
+		"antigravity/gemini-3.8-flash": "high"
+	},
 	"enabledModels": [
-		"claude-bridge/claude-opus-5-5",
-		"claude-bridge/claude-sonnet-5-5",
+		"antigravity/gemini-3.8-flash",
+		"antigravity/gemini-4-argon",
 		"xai/grok-4.7",
 		"deepseek/deepseek-v4-pro",
 		"deepseek/deepseek-flash",

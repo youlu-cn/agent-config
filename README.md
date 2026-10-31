@@ -19,7 +19,7 @@
 安装器按文件或插件目录整组替换。本地已有不同内容时会先显示 diff，确认后再备份到 `~/.agent-config-backups/` 并覆盖。装完重启对应工具即可。
 
 默认设置：
-- **Pi**：全屏 TUI、`system` 主题（跟随终端明暗）、隐藏 thinking 正文、折叠更新日志、默认启用 `codemode`，外部编辑器为 `nvim`。默认模型为 Grok 4.7（`xai/grok-4.7`），模型清单含 Claude Bridge、xAI、DeepSeek 与 Cursor Auto。
+- **Pi**：全屏 TUI、`system` 主题（跟随终端明暗）、隐藏 thinking 正文、折叠更新日志、默认启用 `codemode`，外部编辑器为 `nvim`。默认模型为 Antigravity Gemini 3.8 Flash（`antigravity/gemini-3.8-flash`），该模型启动思考档位为 `high`，其余模型仍为 `medium`。模型清单含 Antigravity Gemini 3.8 Flash、Gemini 4 Argon、xAI、DeepSeek 与 Cursor Auto。Claude Bridge 的两个模型默认不进入轮换。
 - **Fast**：默认关闭；开启可能增加订阅额度消耗。
 - **Claude Code**：全屏 TUI、`auto` 主题、`auto` 权限模式、`high` 思考档位，开启自动压缩上下文与通知，关闭反馈草稿。
 
@@ -68,13 +68,13 @@ npx skills update -g
 
 用 `/login` 登录账号后，通过 `Ctrl+L` 或 `/model` 切换模型。[settings.json](harnesses/pi/config/settings.json) 中启用的模型顺序如下（列在配置里只控制选择器显示，实际能否调用取决于账号权限）：
 
-1. **Claude Bridge**（`pi-claude-bridge`）：复用本机 Claude Code 登录态（需先执行 `claude auth login`），启用 `claude-bridge/claude-opus-5-5` 和 `claude-bridge/claude-sonnet-5-5`。
-2. **xAI 与 DeepSeek**：启动模型为 `xai/grok-4.7`，其后是 DeepSeek V4 Pro 和 DeepSeek V4.1 Flash。
+1. **Antigravity**（`pi-antigravity`）：启动模型为 `antigravity/gemini-3.8-flash`（Gemini 3.8 Flash），同时启用 `antigravity/gemini-4-argon`（Gemini 4 Argon）。该模型的启动思考档位为 `high`，其余模型仍用全局默认 `medium`。使用前在 `/login` 选 Antigravity 完成 Google 登录。列入清单不代表账号已获得该模型授权。
+2. **xAI 与 DeepSeek**：Grok 4.7（`xai/grok-4.7`）、DeepSeek V4 Pro 和 DeepSeek V4.1 Flash。
 3. **Cursor**（`pi-cursor-sdk`）：在 `/login` 里选择 API key，再选 Cursor，粘贴 Cursor Dashboard 的 SDK API key。它不使用 Cursor 桌面或 Agent CLI 的登录态。启用的是 Cursor Auto，模型 ID 为 `default`（显示名 Auto，别名 `auto`），配置写 `cursor/default`。
 
-Codex、Kimi、Antigravity 与 Google Gemini 都不进入轮换；`pi-antigravity` 插件仍保留，用于 Google 搜索与图片生成。
+`pi-claude-bridge` 仍会安装，但 `claude-bridge/claude-opus-5-5` 和 `claude-bridge/claude-sonnet-5-5` 默认不写入启用清单。需要时先执行 `claude auth login`，再把对应模型加进 `enabledModels`。Codex、Kimi 与 Google API 版 Gemini（`google/gemini-4-argon`，需要 `GEMINI_API_KEY`）也不进入轮换。`pi-antigravity` 同时提供 Google 搜索与图片生成。
 
-[Fast](harnesses/pi/builtins/fast/README.md) 用于开启高优先级请求：`/fast` 切换，`/fast on` 开启，`/fast off` 关闭，`/fast status` 查看。开关按 provider 保存在 `~/.pi/agent/state/fast.json`，默认配置文件为 [harnesses/pi/plugin-configs/fast/config.json](harnesses/pi/plugin-configs/fast/config.json)（→ `~/.pi/agent/extensions/fast.json`）。状态栏上的 `fast` 只代表本地已按加速策略发请求，实际是否加速由后端决定。Grok Fast 依赖 xAI 会话；GPT Fast 在当前模型清单外不会生效。
+[Fast](harnesses/pi/builtins/fast/README.md) 用于开启高优先级请求：`/fast` 切换，`/fast on` 开启，`/fast off` 关闭，`/fast status` 查看。开关按 provider 保存在 `~/.pi/agent/state/fast.json`，默认配置文件为 [harnesses/pi/plugin-configs/fast/config.json](harnesses/pi/plugin-configs/fast/config.json)（→ `~/.pi/agent/extensions/fast.json`）。状态栏上的 `fast` 只代表本地已按加速策略发请求，实际是否加速由后端决定。Antigravity 没有 Fast 通道。Grok Fast 依赖 xAI 会话；GPT Fast 在当前模型清单外不会生效。
 
 #### 搜索与扩展工具
 
