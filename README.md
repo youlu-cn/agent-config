@@ -72,7 +72,7 @@ npx skills update -g
 2. **xAI 与 DeepSeek**：Grok 4.7（`xai/grok-4.7`）、DeepSeek V4 Pro 和 DeepSeek V4.1 Flash。
 3. **Cursor**（`pi-cursor-sdk`）：在 `/login` 里选择 API key，再选 Cursor，粘贴 Cursor Dashboard 的 SDK API key。它不使用 Cursor 桌面或 Agent CLI 的登录态。启用的是 Cursor Auto，模型 ID 为 `default`（显示名 Auto，别名 `auto`），配置写 `cursor/default`。
 
-`pi-claude-bridge` 仍会安装，但 `claude-bridge/claude-opus-5-5` 和 `claude-bridge/claude-sonnet-5-5` 默认不写入启用清单。需要时先执行 `claude auth login`，再把对应模型加进 `enabledModels`。Codex、Kimi 与 Google API 版 Gemini（`google/gemini-4-argon`，需要 `GEMINI_API_KEY`）也不进入轮换。`pi-antigravity` 同时提供 Google 搜索与图片生成。
+`pi-claude-bridge` 仍会安装，但 `claude-bridge/claude-opus-5-5` 和 `claude-bridge/claude-sonnet-5-5` 默认不写入启用清单。需要时先执行 `claude auth login`，再把对应模型加进 `enabledModels`。安装器会按 Max 计划写入配置（`provider.plan: "max"`），配置文件为 [harnesses/pi/plugin-configs/claude-bridge/config.json](harnesses/pi/plugin-configs/claude-bridge/config.json) → `~/.pi/agent/claude-bridge.json`。Codex、Kimi 与 Google API 版 Gemini（`google/gemini-4-argon`，需要 `GEMINI_API_KEY`）也不进入轮换。`pi-antigravity` 同时提供 Google 搜索与图片生成。
 
 [Fast](harnesses/pi/builtins/fast/README.md) 用于开启高优先级请求：`/fast` 切换，`/fast on` 开启，`/fast off` 关闭，`/fast status` 查看。开关按 provider 保存在 `~/.pi/agent/state/fast.json`，默认配置文件为 [harnesses/pi/plugin-configs/fast/config.json](harnesses/pi/plugin-configs/fast/config.json)（→ `~/.pi/agent/extensions/fast.json`）。状态栏上的 `fast` 只代表本地已按加速策略发请求，实际是否加速由后端决定。Antigravity 没有 Fast 通道。Grok Fast 依赖 xAI 会话；GPT Fast 在当前模型清单外不会生效。
 
